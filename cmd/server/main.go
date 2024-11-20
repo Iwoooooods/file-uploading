@@ -14,6 +14,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const ACCESS_TOKEN_HEADER = "X-Access-Token"
+
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "pong")
 }
@@ -27,6 +29,11 @@ func main() {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins:  []string{"*"},
+		AllowHeaders:  []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, ACCESS_TOKEN_HEADER},
+		ExposeHeaders: []string{echo.HeaderContentLength, echo.HeaderContentDisposition, echo.HeaderContentEncoding},
+	}))
 
 	router := e.Group("api")
 
