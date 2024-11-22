@@ -11,10 +11,16 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
+	"github.com/Iwoooooods/fs-upload-go/core/database"
+	"github.com/Iwoooooods/fs-upload-go/pkg/config"
+	"github.com/Iwoooooods/fs-upload-go/pkg/squirtle"
 	"github.com/rs/zerolog/log"
 )
 
-const ACCESS_TOKEN_HEADER = "X-Access-Token"
+const (
+	ACCESS_TOKEN_HEADER = "X-Access-Token"
+	STREAM_TOKEN_HEADER = "X-Stream-Token"
+)
 
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "pong")
@@ -31,9 +37,30 @@ func main() {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins:  []string{"*"},
-		AllowHeaders:  []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, ACCESS_TOKEN_HEADER},
+		AllowHeaders:  []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, ACCESS_TOKEN_HEADER, STREAM_TOKEN_HEADER},
 		ExposeHeaders: []string{echo.HeaderContentLength, echo.HeaderContentDisposition, echo.HeaderContentEncoding},
 	}))
+
+	cfg := config.Load("./dev.env")
+	log.Info().Msg("reading config from: " + "./dev.env")
+
+	conn := database.ConnectSqlite(cfg.DbName)
+	ctx := context.Background()
+	if err := conn.Connect(ctx); err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to sqlite")
+	}
+
+	log.Info().Msg("connected to sqlite")
+
+	qs, err := squirtle.InitalizeQueryStore()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize query store")
+	}
+	tokensQm, err := qs.HydrateQueryStore("tokens")
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize token query store")
+	}
+	log.Info().Msgf("token query store hydrated: %v", tokensQm.Keys())
 
 	router := e.Group("api")
 
@@ -45,7 +72,7 @@ func main() {
 	}
 
 	go func() {
-		log.Info().Str("port", port).Msg("server started at")
+		log.Info().Str("port", port).Msg("server started at: " + fmt.Sprintf(":%s", port))
 
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Error().Err(err).Msg("server startup failed")
