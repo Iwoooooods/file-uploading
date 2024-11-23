@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -15,6 +16,12 @@ import (
 const (
 	CHUNK_SIZE = 1024 * 1024 * 4 // 4MB
 )
+
+type File struct {
+	Id   string
+	Path string
+	Ext  string
+}
 
 type Chunk struct {
 	data      io.Reader
@@ -32,6 +39,8 @@ func NewChunk(data io.Reader, chunkId int64, chunkPath string) *Chunk {
 }
 
 type BlobStorage interface {
+	Upload(ctx context.Context, data io.Reader, fileName string) (string, error)
+	Read(ctx context.Context, fileId string) (io.Reader, error)
 }
 
 type LocalFS struct {
@@ -45,8 +54,9 @@ func NewLocalFS(basePath string) *LocalFS {
 	}
 }
 
-func (fs *LocalFS) Upload(ctx context.Context, data io.Reader) (string, error) {
-	fileId := uuid.New().String()
+func (fs *LocalFS) Upload(ctx context.Context, data io.Reader, fileName string) (File, error) {
+	fileId := strings.Split(fileName, ".")[0] + "-" + uuid.New().String()
+	filePath := fileId + "." + strings.Split(fileName, ".")[1]
 	chunks := make([]*Chunk, 0)
 
 	buffer := make([]byte, CHUNK_SIZE)
@@ -54,7 +64,7 @@ func (fs *LocalFS) Upload(ctx context.Context, data io.Reader) (string, error) {
 
 	chunkPath := filepath.Join(fs.basePath, fileId)
 	if err := os.MkdirAll(chunkPath, 0755); err != nil {
-		return "", err
+		return File{}, err
 	}
 
 	for {
@@ -66,13 +76,13 @@ func (fs *LocalFS) Upload(ctx context.Context, data io.Reader) (string, error) {
 			break
 		}
 		if err != nil {
-			return "", err
+			return File{}, err
 		}
 
 		chunkPath := filepath.Join(fs.basePath, fileId, fmt.Sprintf("%d.chunk", chunkId))
 
 		if err := fs.storeChunk(chunkPath, buffer[:n]); err != nil {
-			return "", err
+			return File{}, err
 		}
 
 		chunk := NewChunk(bytes.NewReader(buffer[:n]), chunkId, chunkPath)
@@ -87,7 +97,11 @@ func (fs *LocalFS) Upload(ctx context.Context, data io.Reader) (string, error) {
 			break
 		}
 	}
-	return fileId, nil
+	return File{
+		Id:   fileId,
+		Path: filePath,
+		Ext:  strings.Split(fileName, ".")[1],
+	}, nil
 }
 
 func (fs *LocalFS) storeChunk(chunkPath string, data []byte) error {
@@ -103,4 +117,32 @@ func (fs *LocalFS) storeChunk(chunkPath string, data []byte) error {
 	_, err = f.Write(data)
 
 	return err
+}
+
+func (fs *LocalFS) Read(ctx context.Context, downloadPath string) (io.Reader, error) {
+	chunkParentPath := filepath.Join(fs.basePath, strings.Split(downloadPath, ".")[0])
+
+	fmt.Println("reading chunks from: ", chunkParentPath)
+	if _, err := os.Stat(chunkParentPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("file not found")
+	}
+
+	chunkFiles, err := os.ReadDir(chunkParentPath)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("found ", len(chunkFiles), " chunks")
+
+	var buffer bytes.Buffer
+	for _, chunk := range chunkFiles {
+		fmt.Println("reading chunk: ", chunk.Name())
+		chunkPath := filepath.Join(chunkParentPath, chunk.Name())
+		chunkData, err := os.ReadFile(chunkPath)
+		if err != nil {
+			return nil, err
+		}
+		buffer.Write(chunkData)
+	}
+
+	return &buffer, nil
 }

@@ -1,0 +1,43 @@
+user_agent":"PostmanRuntime/7.40.0","status":200,"error":"","latency":5433333,"latency_human":"5.433333ms","bytes_in":0,"bytes_out":43}
+{"time":"2024-11-22T20:14:52.682596+08:00","id":"","remote_ip":"::1","host":"localhost:9191","method":"POST","uri":"/api/upload/signature.jpg","user_agent":"PostmanRuntime/7.42.0","status":200,"error":"","latency":8027958,"latency_human":"8.027958ms","bytes_in":125778,"bytes_out":50}
+{"time":"2024-11-22T20:59:53.652972+08:00","id":"","remote_ip":"::1","host":"localhost:9191","method":"GET","uri":"/api/download/signature.jpg-2d378c30-ff33-4a57-8179-3d3b3a17d03a","user_agent":"PostmanRuntime/7.42.0","status":404,"error":"code=404, message=Not Found","latency":2429458,"latency_human":"2.429458ms","bytes_in":0,"bytes_out":24}
+{"time":"2024-11-22T21:00:53.327094+08:00","id":"","remote_ip":"::1","host":"localhost:9191","method":"GET","uri":"/api/download/1","user_agent":"PostmanRuntime/7.42.0","status":404,"error":"code=404, message=Not Found","latency":575375,"latency_human":"575.375µs","bytes_in":0,"bytes_out":24}
+^Cmake: *** [run.server] Error 1
+
+hehuaisen@hehuaisendeMacBook-Air file-uploading % make run.server
+go run cmd/server/main.go
+{"level":"info","time":"2024-11-22T21:01:15+08:00","message":"reading config from: ./dev.env"}
+{"level":"info","time":"2024-11-22T21:01:15+08:00","message":"connected to sqlite"}
+[GetAccessToken GetStreamToken CreateToken]
+{"level":"info","time":"2024-11-22T21:01:15+08:00","message":"token query store hydrated: [GetAccessToken GetStreamToken CreateToken]"}
+{"level":"info","port":"9191","time":"2024-11-22T21:01:15+08:00","message":"server started at: :9191"}
+reading chunks from:  tmp/signature.jpg-2d378c30-ff33-4a57-8179-3d3b3a17d03a
+found  2  chunks
+{"time":"2024-11-22T21:01:18.357168+08:00","id":"","remote_ip":"::1","host":"localhost:9191","method":"GET","uri":"/api/download/signature.jpg-2d378c30-ff33-4a57-8179-3d3b3a17d03a","user_agent":"PostmanRuntime/7.42.0","status":200,"error":"","latency":2102500,"latency_human":"2.1025ms","bytes_in":0,"bytes_out":125778}
+^Cmake: *** [run.server] Error 1
+
+hehuaisen@hehuaisendeMacBook-Air file-uploading % make run.server
+go run cmd/server/main.go
+{"level":"info","time":"2024-11-22T21:03:19+08:00","message":"reading config from: ./dev.env"}
+{"level":"info","time":"2024-11-22T21:03:19+08:00","message":"connected to sqlite"}
+[GetStreamToken CreateToken GetAccessToken]
+{"level":"info","time":"2024-11-22T21:03:19+08:00","message":"token query store hydrated: [GetStreamToken CreateToken GetAccessToken]"}
+{"level":"info","port":"9191","time":"2024-11-22T21:03:19+08:00","message":"server started at: :9191"}
+reading chunks from:  tmp/signature.jpg-2d378c30-ff33-4a57-8179-3d3b3a17d03a
+found  2  chunks
+{"time":"2024-11-22T21:03:21.930392+08:00","id":"","remote_ip":"::1","host":"localhost:9191","method":"GET","uri":"/api/download/signature.jpg-2d378c30-ff33-4a57-8179-3d3b3a17d03a","user_agent":"PostmanRuntime/7.42.0","status":200,"error":"","latency":1664792,"latency_human":"1.664792ms","bytes_in":0,"bytes_out":125778}
+^Cmake: *** [run.server] Error 1
+
+hehuaisen@hehuaisendeMacBook-Air file-uploading % make run.server
+go run cmd/server/main.go
+{"level":"info","time":"2024-11-22T21:12:54+08:00","message":"reading config from: ./dev.env"}
+{"level":"info","time":"2024-11-22T21:12:54+08:00","message":"connected to sqlite"}
+[GetAccessToken GetStreamToken CreateToken]
+{"level":"info","time":"2024-11-22T21:12:54+08:00","message":"token query store hydrated: [GetAccessToken GetStreamToken CreateToken]"}
+{"level":"info","port":"9191","time":"2024-11-22T21:12:54+08:00","message":"server started at: :9191"}
+{"time":"2024-11-22T21:13:07.522398+08:00","id":"","remote_ip":"::1","host":"localhost:9191","method":"POST","uri":"/api/upload/signature.jpg","user_agent":"PostmanRuntime/7.42.0","status":200,"error":"","latency":1602875,"latency_human":"1.602875ms","bytes_in":125778,"bytes_out":50}
+reading chunks from:  tmp/signature-394bbe61-8876-4f5d-9558-f716b2ecfdfd.jpg
+found  2  chunks
+{"time":"2024-11-22T21:13:31.182545+08:00","id":"","remote_ip":"::1","host":"localhost:9191","method":"GET","uri":"/api/download/signature-394bbe61-8876-4f5d-9558-f716b2ecfdfd.jpg","user_agent":"PostmanRuntime/7.42.0","status":200,"error":"","latency":2482542,"latency_human":"2.482542ms","bytes_in":0,"bytes_out":125778}
+
+----------------------------747205536530949596912178--

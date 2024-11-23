@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
+	"github.com/Iwoooooods/fs-upload-go/api"
 	"github.com/Iwoooooods/fs-upload-go/core/database"
 	"github.com/Iwoooooods/fs-upload-go/pkg/config"
 	"github.com/Iwoooooods/fs-upload-go/pkg/squirtle"
@@ -52,19 +53,18 @@ func main() {
 
 	log.Info().Msg("connected to sqlite")
 
-	qs, err := squirtle.InitalizeQueryStore()
+	_, err := squirtle.InitalizeQueryStore()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize query store")
 	}
-	tokensQm, err := qs.HydrateQueryStore("tokens")
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize token query store")
-	}
-	log.Info().Msgf("token query store hydrated: %v", tokensQm.Keys())
+	// tokensQm, err := qs.HydrateQueryStore("tokens")
+	// if err != nil {
+	// 	log.Fatal().Err(err).Msg("failed to initialize token query store")
+	// }
+	// log.Info().Msgf("token query store hydrated: %v", tokensQm.Keys())
 
 	router := e.Group("api")
-
-	router.GET("/ping", hello)
+	api.RegisterRoutes(router)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
