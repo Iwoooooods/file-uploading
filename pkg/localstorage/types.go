@@ -5,7 +5,7 @@ package localstorage
 type ChunkMeta struct {
 	// when encoding to json, map the key to this struct field name
 	FileName string `json:"file_name"`
-	MD5Hash  string `json:"md5_hash"`
+	MD5Hash  string `json:"md5_hash"` // md5 as file id
 	Index    int    `json:"index"`
 }
 
@@ -21,6 +21,7 @@ type ChunkMeta struct {
 //
 // plus, the file id consists of filename+md5hash+extension
 type FileMetadata struct {
+	FileId   string `json:"file_id"`
 	FileName string `json:"file_name"`
 	MD5Hash  string `json:"md5_hash"`
 }
@@ -48,10 +49,10 @@ type Uploader interface {
 }
 
 type DefaultUploader struct {
-	serverURL   string
-	username    string
-	basePath    string
-	metaManager *DefaultMetadataManager
+	ServerURL   string
+	Username    string
+	BasePath    string
+	MetaManager *DefaultMetadataManager
 }
 
 // metadata is stored in a json file
@@ -61,5 +62,5 @@ type MetadataManager interface {
 }
 
 type DefaultMetadataManager struct {
-	metaData map[string]FileMetadata
+	MetaData map[string]FileMetadata
 }

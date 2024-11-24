@@ -1,10 +1,15 @@
 package localstorage
 
 import (
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/google/uuid"
 )
+
+const BUFFER_SIZE = 1024 * 1024 * 4
 
 func NewUploader(serverURL string, username string) (*DefaultUploader, error) {
 	// check if user exists, if not create new fold for the user
@@ -21,20 +26,44 @@ func NewUploader(serverURL string, username string) (*DefaultUploader, error) {
 	}
 
 	return &DefaultUploader{
-		serverURL:   serverURL,
-		username:    username,
-		basePath:    basePath,
-		metaManager: metaManager,
+		ServerURL:   serverURL,
+		Username:    username,
+		BasePath:    basePath,
+		MetaManager: metaManager,
 	}, nil
 }
 
-// func (u *DefaultUploader) UploadFile(filePath string, md5 string) (fileId string, err error) {
-// 	return nil
-// }
+func (u *DefaultUploader) UploadFile(src io.Reader, fileName string, md5 string) (fileId string, err error) {
+	buffer := make([]byte, BUFFER_SIZE)
+	filePath := filepath.Join(u.BasePath, fileName)
+	file, err := os.Create(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	_, err = io.CopyBuffer(file, src, buffer)
+	if err != nil {
+		return "", err
+	}
+
+	newMetadata := make(map[string]FileMetadata)
+	newMetadata[fileName] = FileMetadata{
+		FileId:   uuid.New().String(),
+		FileName: fileName,
+		MD5Hash:  md5,
+	}
+	err = u.MetaManager.SaveMetadata(u.BasePath, newMetadata)
+	if err != nil {
+		return "", err
+	}
+
+	return md5, nil
+}
 
 func (u *DefaultUploader) CheckFileExists(fileName string, md5 string) (exists bool, err error) {
 	// check if file exists
-	if _, err := os.Stat(filepath.Join(u.basePath, fileName)); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(u.BasePath, fileName)); os.IsNotExist(err) {
 		// if not exists, create new metadata.json and return fileId and false
 		newMetadata := make(map[string]FileMetadata)
 		newMetadata[fileName] = FileMetadata{
@@ -42,8 +71,9 @@ func (u *DefaultUploader) CheckFileExists(fileName string, md5 string) (exists b
 			MD5Hash:  md5,
 		}
 
-		err = u.metaManager.SaveMetadata(u.basePath, newMetadata)
+		err = u.MetaManager.SaveMetadata(u.BasePath, newMetadata)
 		if err != nil {
+			log.Printf("failed to save metadata: %v", err)
 			return false, err
 		}
 		return false, nil
@@ -52,9 +82,10 @@ func (u *DefaultUploader) CheckFileExists(fileName string, md5 string) (exists b
 	// if exists, check if md5 changes
 	// if md5 changes, update metadata.json
 	// if md5 does not change, directly return fileId
-	metadataFilePath := filepath.Join(u.basePath, "metadata.json")
-	oldMetadata, err := u.metaManager.LoadMetadata(metadataFilePath)
+	metadataFilePath := filepath.Join(u.BasePath, "metadata.json")
+	oldMetadata, err := u.MetaManager.LoadMetadata(metadataFilePath)
 	if err != nil {
+		log.Printf("failed to load metadata: %v", err)
 		return false, err
 	}
 

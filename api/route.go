@@ -1,8 +1,13 @@
 package api
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/Iwoooooods/fs-upload-go/pkg/localstorage"
 	"github.com/labstack/echo/v4"
@@ -21,7 +26,7 @@ func ping(c echo.Context) error {
 func uploadFile(c echo.Context) error {
 	username := c.Param("username")
 	filename := c.Param("filename")
-	basePath := "."
+	basePath := "./private/files"
 	uploader, err := localstorage.NewUploader(basePath, username)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "failed to create uploader")
@@ -29,16 +34,21 @@ func uploadFile(c echo.Context) error {
 	log.Printf("current uploader is the user: %v", uploader)
 
 	// get file and md5 from request body
-	file, err := c.FormFile("file")
-	if err != nil {
-		return c.String(http.StatusBadRequest, "file is required")
-	}
-	md5 := c.FormValue("md5")
+	file := c.Request().Body
+
+	// generate md5 hash of the file
+	hasher := md5.New()
+	tee := io.TeeReader(file, hasher)
+	md5 := hex.EncodeToString(hasher.Sum(nil))
+
 	// check if the md5 of the file already exists
 	// return fileId, true if exists, false if not
 	exists, err := uploader.CheckFileExists(filename, md5)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "failed to check if file exists")
+		log.Printf("failed to check if file exists: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "file exists",
+		})
 	}
 	if exists {
 		return c.JSON(http.StatusOK, map[string]string{
@@ -47,14 +57,36 @@ func uploadFile(c echo.Context) error {
 	}
 
 	// save file to local storage
-	err = uploader.SaveFile(file, filename, md5)
+	fileId, err := uploader.UploadFile(tee, filename, md5)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "failed to save file")
 	}
 
-	return c.String(http.StatusOK, "pong")
+	return c.JSON(http.StatusOK, map[string]string{
+		"fileId": fileId,
+	})
 }
 
 func downloadFile(c echo.Context) error {
+	// Get username and filename from parameters
+	username := c.Param("username")
+	filename := c.Param("filename")
+	basePath := "./private/files"
 
+	// Create uploader instance to access metadata
+	uploader, err := localstorage.NewUploader(basePath, username)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "failed to create uploader")
+	}
+
+	// Get file path
+	filePath := filepath.Join(uploader.BasePath, filename)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return c.String(http.StatusNotFound, "file not found")
+	}
+
+	// Open and return the file
+	return c.File(filePath)
 }

@@ -13,7 +13,7 @@ func NewMetadataManager(basePath string) (*DefaultMetadataManager, error) {
 	if os.IsNotExist(err) {
 		os.WriteFile(filepath.Join(basePath, "metadata.json"), []byte("{}"), os.ModePerm)
 		return &DefaultMetadataManager{
-			metaData: make(map[string]FileMetadata),
+			MetaData: make(map[string]FileMetadata),
 		}, nil
 	}
 	if err != nil && err != os.ErrNotExist {
@@ -27,7 +27,7 @@ func NewMetadataManager(basePath string) (*DefaultMetadataManager, error) {
 	}
 
 	return &DefaultMetadataManager{
-		metaData: metadataMap,
+		MetaData: metadataMap,
 	}, nil
 }
 
@@ -45,8 +45,7 @@ func (m *DefaultMetadataManager) SaveMetadata(metaPath string, metadata map[stri
 
 // LoadMetadata loads the metadata from the given file path
 // metaPath is defined: basePath/username/metadata.json
-func (m *DefaultMetadataManager) LoadMetadata(basePath string) (map[string]FileMetadata, error) {
-	metaPath := filepath.Join(basePath, "metadata.json")
+func (m *DefaultMetadataManager) LoadMetadata(metaPath string) (map[string]FileMetadata, error) {
 	metadata := make(map[string]FileMetadata)
 
 	data, err := os.ReadFile(metaPath)
