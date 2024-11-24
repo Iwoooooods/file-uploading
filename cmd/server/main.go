@@ -23,10 +23,6 @@ const (
 	STREAM_TOKEN_HEADER = "X-Stream-Token"
 )
 
-func hello(c echo.Context) error {
-	return c.String(http.StatusOK, "pong")
-}
-
 func main() {
 	var port string
 	flag.StringVar(&port, "port", "9191", "port to listen on")

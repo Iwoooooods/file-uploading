@@ -1,19 +1,17 @@
 package api
 
 import (
-	"context"
 	"log"
 	"net/http"
-	"strings"
 
-	"github.com/Iwoooooods/fs-upload-go/pkg/blobstorage"
+	"github.com/Iwoooooods/fs-upload-go/pkg/localstorage"
 	"github.com/labstack/echo/v4"
 )
 
 func RegisterRoutes(e *echo.Group) {
 	e.GET("/ping", ping)
-	e.POST("/upload/:filename", uploadFile)
-	e.GET("/download/:downloadPath", downloadFile)
+	e.POST("/upload/:username/:filename", uploadFile)
+	e.GET("/download/:username/:filename", downloadFile)
 }
 
 func ping(c echo.Context) error {
@@ -21,43 +19,42 @@ func ping(c echo.Context) error {
 }
 
 func uploadFile(c echo.Context) error {
-	fileName := c.Param("filename")
-	fs := blobstorage.NewLocalFS("./tmp/")
-	if fileName == "" {
-		return c.String(http.StatusBadRequest, "filename is required")
-	}
-	file, err := fs.Upload(context.Background(), c.Request().Body, fileName)
+	username := c.Param("username")
+	filename := c.Param("filename")
+	basePath := "."
+	uploader, err := localstorage.NewUploader(basePath, username)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
+		return c.String(http.StatusInternalServerError, "failed to create uploader")
 	}
-	return c.JSON(http.StatusOK, file)
+	log.Printf("current uploader is the user: %v", uploader)
+
+	// get file and md5 from request body
+	file, err := c.FormFile("file")
+	if err != nil {
+		return c.String(http.StatusBadRequest, "file is required")
+	}
+	md5 := c.FormValue("md5")
+	// check if the md5 of the file already exists
+	// return fileId, true if exists, false if not
+	exists, err := uploader.CheckFileExists(filename, md5)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "failed to check if file exists")
+	}
+	if exists {
+		return c.JSON(http.StatusOK, map[string]string{
+			"exists": "true",
+		})
+	}
+
+	// save file to local storage
+	err = uploader.SaveFile(file, filename, md5)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "failed to save file")
+	}
+
+	return c.String(http.StatusOK, "pong")
 }
 
 func downloadFile(c echo.Context) error {
-	downloadPath := c.Param("downloadPath")
-	log.Println("ext of file: ", downloadPath)
-	ext := strings.Split(downloadPath, ".")[1]
 
-	fs := blobstorage.NewLocalFS("./tmp/")
-	reader, err := fs.Read(context.Background(), downloadPath)
-	if err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
-	}
-
-	contentType := "application/octet-stream"
-
-	switch ext {
-	case "jpg", "jpeg":
-		contentType = "image/jpeg"
-	case "png":
-		contentType = "image/png"
-	case "gif":
-		contentType = "image/gif"
-	case "webp":
-		contentType = "image/webp"
-	}
-
-	c.Response().Header().Set("Content-Type", contentType)
-
-	return c.Stream(http.StatusOK, contentType, reader)
 }
