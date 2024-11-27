@@ -12,9 +12,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/Iwoooooods/fs-upload-go/api"
-	"github.com/Iwoooooods/fs-upload-go/core/database"
-	"github.com/Iwoooooods/fs-upload-go/pkg/config"
-	"github.com/Iwoooooods/fs-upload-go/pkg/squirtle"
+	"github.com/Iwoooooods/fs-upload-go/internal/config"
+	"github.com/Iwoooooods/fs-upload-go/internal/database"
 	"github.com/rs/zerolog/log"
 )
 
@@ -25,7 +24,7 @@ const (
 
 func main() {
 	var port string
-	flag.StringVar(&port, "port", "9191", "port to listen on")
+	flag.StringVar(&port, "port", "8080", "port to listen on")
 	flag.Parse()
 
 	e := echo.New()
@@ -38,29 +37,18 @@ func main() {
 		ExposeHeaders: []string{echo.HeaderContentLength, echo.HeaderContentDisposition, echo.HeaderContentEncoding},
 	}))
 
-	cfg := config.Load("./dev.env")
-	log.Info().Msg("reading config from: " + "./dev.env")
+	cfg := config.Load(".env")
+	log.Info().Msg("reading config from: " + ".env")
 
-	conn := database.ConnectSqlite(cfg.DbName)
-	ctx := context.Background()
-	if err := conn.Connect(ctx); err != nil {
-		log.Fatal().Err(err).Msg("failed to connect to sqlite")
-	}
-
-	log.Info().Msg("connected to sqlite")
-
-	_, err := squirtle.InitalizeQueryStore()
+	db, err := database.NewDatabase(cfg)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize query store")
+		log.Error().Err(err).Msg("failed to create database")
 	}
-	// tokensQm, err := qs.HydrateQueryStore("tokens")
-	// if err != nil {
-	// 	log.Fatal().Err(err).Msg("failed to initialize token query store")
-	// }
-	// log.Info().Msgf("token query store hydrated: %v", tokensQm.Keys())
+	defer db.Close()
 
 	router := e.Group("api")
-	api.RegisterRoutes(router)
+	apiHandler := api.NewHandler(cfg, db)
+	apiHandler.RegisterRoutes(router)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),

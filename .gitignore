@@ -3,3 +3,11 @@
 tmp/
 
 private/
+
+# sqlite
+*.db
+
+# env
+*.env
+
+*.log

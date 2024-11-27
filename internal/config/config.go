@@ -5,12 +5,13 @@ import (
 	"github.com/spf13/viper"
 )
 
-type AppConfig struct {
-	DSN    string
-	DbName string
+type Config struct {
+	DSN      string
+	DbName   string
+	BasePath string
 }
 
-func Load(envFile string) *AppConfig {
+func Load(envFile string) *Config {
 	viper.SetConfigFile(envFile)
 	viper.SetConfigType("env")
 	if err := viper.ReadInConfig(); err != nil {
@@ -21,8 +22,9 @@ func Load(envFile string) *AppConfig {
 		}
 	}
 
-	return &AppConfig{
-		DSN:    viper.GetString("DSN"),
-		DbName: viper.GetString("DB_NAME"),
+	return &Config{
+		DSN:      viper.GetString("DSN"),
+		DbName:   viper.GetString("DB_NAME"),
+		BasePath: viper.GetString("BASE_PATH"),
 	}
 }

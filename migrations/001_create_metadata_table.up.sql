@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS metadata (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_id TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    md5_hash TEXT NOT NULL
+);
