@@ -19,6 +19,7 @@ const BUFFER_SIZE = 1024 * 1024 * 4
 
 type Uploader interface {
 	UploadFile(filePath string, md5 string, metaService services.MetaService) (fileId string, err error)
+	DeleteFile(filePath string) error
 }
 
 type DefaultUploader struct {
@@ -86,22 +87,6 @@ func (u *DefaultUploader) CheckFileExists(ctx context.Context, md5 string) (exis
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	// // check if file exists
-	// if _, err := os.Stat(filepath.Join(u.BasePath, fileName)); os.IsNotExist(err) {
-	// 	err = u.MetaService.SaveMetadata(timeoutCtx, models.FileMetadata{
-	// 		FileId:   fileId,
-	// 		FileName: fileName,
-	// 		MD5Hash:  md5,
-	// 	})
-	// 	if err != nil {
-	// 		log.Printf("failed to save metadata: %v", err)
-	// 		return false, err
-	// 	}
-	// 	return false, nil
-	// }
-
-	// if exists, check if md5 changes
-	// if md5 does not change, directly return fileId
 	metadata, err := u.MetaService.GetMetadataByMD5(timeoutCtx, md5)
 	if err == sql.ErrNoRows {
 		// file does not exist
@@ -116,4 +101,13 @@ func (u *DefaultUploader) CheckFileExists(ctx context.Context, md5 string) (exis
 	}
 
 	return false, nil
+}
+
+func (u *DefaultUploader) DeleteFile(ctx context.Context, fileName string) error {
+	filePath := filepath.Join(u.BasePath, fileName)
+	return os.Remove(filePath)
+}
+
+func (u *DefaultUploader) GetFileURL(fileName string) string {
+	return u.ServerURL + "/" + u.Username + "/" + fileName
 }
