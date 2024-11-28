@@ -9,10 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Iwoooooods/fs-upload-go/internal/models"
 	"github.com/Iwoooooods/fs-upload-go/internal/repositories"
 	"github.com/Iwoooooods/fs-upload-go/internal/services"
-	"github.com/google/uuid"
 )
 
 const BUFFER_SIZE = 1024 * 1024 * 4
@@ -47,38 +45,24 @@ func NewUploader(serverURL string, username string, db *sql.DB) (*DefaultUploade
 	}, nil
 }
 
-func (u *DefaultUploader) UploadFile(ctx context.Context, src io.Reader, fileName string, md5 string) (string, error) {
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
+func (u *DefaultUploader) UploadFile(ctx context.Context, src io.Reader, fileName string) error {
 
 	buffer := make([]byte, BUFFER_SIZE)
 	filePath := filepath.Join(u.BasePath, fileName)
 	file, err := os.Create(filePath)
 	if err != nil {
-		return "", err
+		log.Printf("failed to create file: %v", err)
+		return err
 	}
 	defer file.Close()
 
 	_, err = io.CopyBuffer(file, src, buffer)
 	if err != nil {
-		return "", err
+		log.Printf("failed to copy file: %v", err)
+		return err
 	}
 
-	fileId := uuid.New().String()
-
-	err = u.MetaService.SaveMetadata(timeoutCtx, models.FileMetadata{
-		FileId:   fileId,
-		FileName: fileName,
-		MD5Hash:  md5,
-	})
-
-	if err != nil {
-		log.Printf("failed to save metadata: %v", err)
-		return "", err
-	}
-
-	return fileId, nil
+	return nil
 }
 
 func (u *DefaultUploader) CheckFileExists(ctx context.Context, md5 string) (exists bool, err error) {
@@ -86,22 +70,6 @@ func (u *DefaultUploader) CheckFileExists(ctx context.Context, md5 string) (exis
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	// // check if file exists
-	// if _, err := os.Stat(filepath.Join(u.BasePath, fileName)); os.IsNotExist(err) {
-	// 	err = u.MetaService.SaveMetadata(timeoutCtx, models.FileMetadata{
-	// 		FileId:   fileId,
-	// 		FileName: fileName,
-	// 		MD5Hash:  md5,
-	// 	})
-	// 	if err != nil {
-	// 		log.Printf("failed to save metadata: %v", err)
-	// 		return false, err
-	// 	}
-	// 	return false, nil
-	// }
-
-	// if exists, check if md5 changes
-	// if md5 does not change, directly return fileId
 	metadata, err := u.MetaService.GetMetadataByMD5(timeoutCtx, md5)
 	if err == sql.ErrNoRows {
 		// file does not exist

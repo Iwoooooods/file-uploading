@@ -44,7 +44,7 @@ func TestCheckFileExists(t *testing.T) {
 	})
 
 	t.Run("upload file", func(t *testing.T) {
-		_, err := uploader.UploadFile(context.Background(), bytes.NewReader([]byte("hello world!")), "testfile", "testmd5")
+		err := uploader.UploadFile(context.Background(), bytes.NewReader([]byte("hello world!")), "testfile")
 		if err != nil {
 			t.Fatalf("failed to upload file: %v", err)
 		}

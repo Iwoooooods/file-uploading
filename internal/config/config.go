@@ -9,6 +9,7 @@ type Config struct {
 	DSN      string
 	DbName   string
 	BasePath string
+	ServerHost string
 }
 
 func Load(envFile string) *Config {
@@ -26,5 +27,6 @@ func Load(envFile string) *Config {
 		DSN:      viper.GetString("DSN"),
 		DbName:   viper.GetString("DB_NAME"),
 		BasePath: viper.GetString("BASE_PATH"),
+		ServerHost: viper.GetString("SERVER_HOST"),
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"database/sql"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -33,20 +34,21 @@ func (h *Handler) RegisterRoutes(e *echo.Group) {
 	e.GET("/ping", func(c echo.Context) error {
 		return c.String(http.StatusOK, "pong")
 	})
-	e.POST("/upload/:username/:filename", h.uploadFile)
+	// filename is the combination of fileid and extension
+	e.POST("/upload/:userid/:filename", h.uploadFile)
 	e.GET("/download/:username/:filename", h.downloadFile)
 }
 
 func (h *Handler) uploadFile(c echo.Context) error {
 	ctx := context.Background()
 
-	username := c.Param("username")
+	userid := c.Param("userid")
 	filename := c.Param("filename")
 	// load env config from dev.env
 	basePath := h.cfg.BasePath
 	log.Printf("storing files in: %v", basePath)
 
-	uploader, err := localstorage.NewUploader(basePath, username, h.db)
+	uploader, err := localstorage.NewUploader(basePath, userid, h.db)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to create uploader",
@@ -62,7 +64,7 @@ func (h *Handler) uploadFile(c echo.Context) error {
 	hasher := md5.New()
 	writer := io.MultiWriter(&buffer, hasher)
 
-	// Read the entire content through the TeeReader first
+	// Read the entire content
 	if _, err := io.Copy(writer, file); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to calculate MD5",
@@ -70,29 +72,18 @@ func (h *Handler) uploadFile(c echo.Context) error {
 	}
 	md5Hash := hex.EncodeToString(hasher.Sum(nil))
 
-	// check if the md5 of the file already exists
-	// return fileId, true if exists, false if not
-	exists, err := uploader.CheckFileExists(ctx, md5Hash)
+	// upload file
+	err = uploader.UploadFile(ctx, &buffer, filename)
 	if err != nil {
-		log.Printf("failed to check if file exists: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "failed to check if file exists",
+			"error": "failed to upload file",
 		})
-	}
-	if exists {
-		return c.JSON(http.StatusOK, map[string]string{
-			"exists": "true",
-		})
-	}
-
-	// save file to local storage
-	fileId, err := uploader.UploadFile(ctx, &buffer, filename, md5Hash)
-	if err != nil {
-		return c.String(http.StatusInternalServerError, "failed to save file")
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{
-		"fileId": fileId,
+		"fileName": filename,
+		"md5Hash":  md5Hash,
+		"url":      fmt.Sprintf("%v/%v/%v", h.cfg.ServerHost, userid, filename),
 	})
 }
 
@@ -119,4 +110,12 @@ func (h *Handler) downloadFile(c echo.Context) error {
 
 	// Open and return the file
 	return c.File(filePath)
+}
+
+func (h *Handler) deleteFile(c echo.Context) error {
+	return nil
+}
+
+func (h *Handler) updateFile(c echo.Context) error {
+	return nil
 }
