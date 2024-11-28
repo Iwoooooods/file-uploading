@@ -17,6 +17,7 @@ const BUFFER_SIZE = 1024 * 1024 * 4
 
 type Uploader interface {
 	UploadFile(filePath string, md5 string, metaService services.MetaService) (fileId string, err error)
+	DeleteFile(filePath string) error
 }
 
 type DefaultUploader struct {
@@ -84,4 +85,13 @@ func (u *DefaultUploader) CheckFileExists(ctx context.Context, md5 string) (exis
 	}
 
 	return false, nil
+}
+
+func (u *DefaultUploader) DeleteFile(ctx context.Context, fileName string) error {
+	filePath := filepath.Join(u.BasePath, fileName)
+	return os.Remove(filePath)
+}
+
+func (u *DefaultUploader) GetFileURL(fileName string) string {
+	return u.ServerURL + "/" + u.Username + "/" + fileName
 }
