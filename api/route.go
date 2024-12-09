@@ -37,6 +37,7 @@ func (h *Handler) RegisterRoutes(e *echo.Group) {
 	// filename is the combination of fileid and extension
 	e.POST("/upload/:userid/:filename", h.uploadFile)
 	e.GET("/download/:username/:filename", h.downloadFile)
+	e.DELETE("/delete/:username/:filename", h.deleteFile)
 }
 
 func (h *Handler) uploadFile(c echo.Context) error {
@@ -113,9 +114,31 @@ func (h *Handler) downloadFile(c echo.Context) error {
 }
 
 func (h *Handler) deleteFile(c echo.Context) error {
-	return nil
+	ctx := context.Background()
+	username := c.Param("username")
+	filename := c.Param("filename")
+	basePath := h.cfg.BasePath
+
+	// Create uploader instance to access metadata
+	uploader, err := localstorage.NewUploader(basePath, username, h.db)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "failed to create uploader")
+	}
+
+	filePath := filepath.Join(uploader.BasePath, filename)
+
+	err = uploader.DeleteFile(ctx, filePath)
+	if err != nil {
+		fmt.Printf("failed to delete file: %v", err)
+		return c.String(http.StatusInternalServerError, "failed to delete file")
+	}
+
+	fmt.Printf("file deleted: %v", filePath)
+	return c.NoContent(http.StatusOK)
 }
 
 func (h *Handler) updateFile(c echo.Context) error {
+
 	return nil
 }
+

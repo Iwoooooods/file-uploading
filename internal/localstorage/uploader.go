@@ -47,23 +47,34 @@ func NewUploader(serverURL string, username string, db *sql.DB) (*DefaultUploade
 }
 
 func (u *DefaultUploader) UploadFile(ctx context.Context, src io.Reader, fileName string) error {
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
-	buffer := make([]byte, BUFFER_SIZE)
-	filePath := filepath.Join(u.BasePath, fileName)
-	file, err := os.Create(filePath)
-	if err != nil {
-		log.Printf("failed to create file: %v", err)
+	done := make(chan error, 1)
+
+	go func() {
+		buffer := make([]byte, BUFFER_SIZE)
+		filePath := filepath.Join(u.BasePath, fileName)
+		file, err := os.Create(filePath)
+		if err != nil {
+			done <- err
+			return
+		}
+		defer file.Close()
+
+		_, err = io.CopyBuffer(file, src, buffer)
+		done <- err
+	}()
+
+	// Wait for either completion or timeout
+	select {
+	case err := <-done:
 		return err
+	case <-ctxWithTimeout.Done():
+		// Clean up the partially written file
+		os.Remove(filepath.Join(u.BasePath, fileName))
+		return ctxWithTimeout.Err()
 	}
-	defer file.Close()
-
-	_, err = io.CopyBuffer(file, src, buffer)
-	if err != nil {
-		log.Printf("failed to copy file: %v", err)
-		return err
-	}
-
-	return nil
 }
 
 func (u *DefaultUploader) CheckFileExists(ctx context.Context, md5 string) (exists bool, err error) {
@@ -87,9 +98,22 @@ func (u *DefaultUploader) CheckFileExists(ctx context.Context, md5 string) (exis
 	return false, nil
 }
 
-func (u *DefaultUploader) DeleteFile(ctx context.Context, fileName string) error {
-	filePath := filepath.Join(u.BasePath, fileName)
-	return os.Remove(filePath)
+func (u *DefaultUploader) DeleteFile(ctx context.Context, filePath string) error {
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	done := make(chan error, 1)
+
+	go func() {
+		done <- os.Remove(filePath)
+	}()
+
+	select {
+	case err := <-done:
+		return err
+	case <-ctxWithTimeout.Done():
+		return ctxWithTimeout.Err()
+	}
 }
 
 func (u *DefaultUploader) GetFileURL(fileName string) string {
